@@ -1,124 +1,122 @@
 /**
- * NutriTrack - Vanilla Calorie & Macro Tracker
+ * SalesPulse - Sales Analytics Dashboard
  * Pure Vanilla JavaScript with browser localStorage persistence.
+ * Zero external libraries, zero backend dependencies.
  */
 
 (function () {
   'use strict';
 
   // -------------------------------------------------------------------------
-  // LocalStorage Keys & Defaults
+  // Storage Keys & Constants
   // -------------------------------------------------------------------------
   const STORAGE_KEYS = {
-    ENTRIES: 'nutritrack_food_entries_v1',
-    SETTINGS: 'nutritrack_settings_v1',
-    WATER: 'nutritrack_water_logs_v1'
+    TRANSACTIONS: 'salespulse_transactions_v1',
+    SETTINGS: 'salespulse_settings_v1'
   };
 
   const DEFAULT_SETTINGS = {
-    dailyGoal: 2000,
-    waterGoal: 2000
+    monthlyQuota: 120000
+  };
+
+  const CATEGORY_COLORS = {
+    'Software': '#2563eb',
+    'Hardware': '#10b981',
+    'Services': '#8b5cf6',
+    'Subscriptions': '#f59e0b',
+    'Accessories': '#ec4899'
+  };
+
+  const PAYMENT_ICONS = {
+    'Credit Card': '💳',
+    'Wire Transfer': '🏦',
+    'Stripe': '⚡',
+    'PayPal': '🅿️',
+    'Check': '📝'
   };
 
   // -------------------------------------------------------------------------
   // App State
   // -------------------------------------------------------------------------
   let state = {
-    currentDate: getTodayDateString(), // Format: YYYY-MM-DD
-    entries: [],
+    transactions: [],
     settings: { ...DEFAULT_SETTINGS },
-    waterLogs: {},
-    searchQuery: '',
-    editingEntryId: null
+    filters: {
+      timeRange: 'month',
+      category: 'all',
+      status: 'all',
+      search: ''
+    },
+    sort: {
+      column: 'date',
+      direction: 'desc'
+    },
+    editingId: null
   };
 
   // -------------------------------------------------------------------------
-  // DOM Elements Cache
+  // DOM Cache
   // -------------------------------------------------------------------------
   const elements = {
-    // Header & Actions
-    openAddBtn: document.getElementById('open-add-btn'),
+    // Actions & Filter Controls
+    openNewSaleBtn: document.getElementById('open-new-sale-btn'),
     openSettingsBtn: document.getElementById('open-settings-btn'),
+    timeRangeSelect: document.getElementById('time-range-select'),
+    categoryFilterSelect: document.getElementById('category-filter-select'),
+    statusFilterSelect: document.getElementById('status-filter-select'),
+    quickSeedBtn: document.getElementById('quick-seed-btn'),
+    tableSearchInput: document.getElementById('table-search-input'),
 
-    // Date Navigation
-    prevDayBtn: document.getElementById('prev-day-btn'),
-    nextDayBtn: document.getElementById('next-day-btn'),
-    dateBadge: document.getElementById('date-label-badge'),
-    currentDateHeading: document.getElementById('current-date-heading'),
-    datePickerInput: document.getElementById('date-picker-input'),
+    // KPI Metrics
+    kpiTotalRevenue: document.getElementById('kpi-total-revenue'),
+    kpiTotalOrders: document.getElementById('kpi-total-orders'),
+    kpiCompletedRatio: document.getElementById('kpi-completed-ratio'),
+    kpiAov: document.getElementById('kpi-aov'),
+    targetProgressPercent: document.getElementById('target-progress-percent'),
+    targetProgressFill: document.getElementById('target-progress-fill'),
+    targetRemainingLabel: document.getElementById('target-remaining-label'),
 
-    // Calorie Dashboard
-    totalConsumedVal: document.getElementById('total-consumed-val'),
-    remainingCalorieVal: document.getElementById('remaining-calorie-val'),
-    remainingCalorieLabel: document.getElementById('remaining-calorie-label'),
-    dailyGoalVal: document.getElementById('daily-goal-val'),
-    progressCircle: document.getElementById('calorie-progress-circle'),
-    linearProgressBar: document.getElementById('calorie-progress-bar'),
-    progressPercentageLabel: document.getElementById('progress-percentage-label'),
-    calorieStatusLabel: document.getElementById('calorie-status-label'),
-    editGoalQuickBtn: document.getElementById('edit-goal-quick-btn'),
+    // Charts & Insights
+    trendChartContainer: document.getElementById('trend-chart-container'),
+    revenueTrendSvg: document.getElementById('revenue-trend-svg'),
+    chartTooltip: document.getElementById('chart-tooltip'),
+    donutSegmentsGroup: document.getElementById('donut-segments-group'),
+    donutCenterTotal: document.getElementById('donut-center-total'),
+    categoryLegendList: document.getElementById('category-legend-list'),
+    topProductsList: document.getElementById('top-products-list'),
+    paymentMethodsList: document.getElementById('payment-methods-list'),
 
-    // Macros
-    proteinGrams: document.getElementById('protein-grams'),
-    carbsGrams: document.getElementById('carbs-grams'),
-    fatGrams: document.getElementById('fat-grams'),
-    proteinCals: document.getElementById('protein-cals'),
-    carbsCals: document.getElementById('carbs-cals'),
-    fatCals: document.getElementById('fat-cals'),
-    proteinBarFill: document.getElementById('protein-bar-fill'),
-    carbsBarFill: document.getElementById('carbs-bar-fill'),
-    fatBarFill: document.getElementById('fat-bar-fill'),
+    // Transactions Table
+    transactionsTableBody: document.getElementById('transactions-table-body'),
+    tableCountLabel: document.getElementById('table-count-label'),
+    tableHeaderCells: document.querySelectorAll('.data-table th.sortable'),
 
-    // Water
-    waterCurrentVal: document.getElementById('water-current-val'),
-    waterGoalVal: document.getElementById('water-goal-val'),
-    waterProgressBar: document.getElementById('water-progress-bar'),
-    addWaterBtn: document.getElementById('add-water-btn'),
-    addWater500Btn: document.getElementById('add-water-500-btn'),
-    resetWaterBtn: document.getElementById('reset-water-btn'),
-
-    // Presets & Search
-    presetPills: document.querySelectorAll('.preset-pill'),
-    foodSearchInput: document.getElementById('food-search-input'),
-
-    // Meal Groups
-    mealLists: {
-      breakfast: document.getElementById('breakfast-items-list'),
-      lunch: document.getElementById('lunch-items-list'),
-      dinner: document.getElementById('dinner-items-list'),
-      snacks: document.getElementById('snacks-items-list')
-    },
-    mealTotals: {
-      breakfast: document.getElementById('breakfast-total-cal'),
-      lunch: document.getElementById('lunch-total-cal'),
-      dinner: document.getElementById('dinner-total-cal'),
-      snacks: document.getElementById('snacks-total-cal')
-    },
-
-    // Food Modal
-    foodModal: document.getElementById('food-modal'),
-    foodModalTitle: document.getElementById('food-modal-title'),
-    closeFoodModalBtn: document.getElementById('close-food-modal-btn'),
-    cancelFoodBtn: document.getElementById('cancel-food-btn'),
-    foodForm: document.getElementById('food-form'),
-    entryIdInput: document.getElementById('entry-id-input'),
-    foodNameInput: document.getElementById('food-name-input'),
-    mealTypeSelect: document.getElementById('meal-type-select'),
-    caloriesInput: document.getElementById('calories-input'),
-    servingInput: document.getElementById('serving-input'),
-    proteinInput: document.getElementById('protein-input'),
-    carbsInput: document.getElementById('carbs-input'),
-    fatInput: document.getElementById('fat-input'),
+    // Sale Modal
+    saleModal: document.getElementById('sale-modal'),
+    modalTitle: document.getElementById('modal-title'),
+    closeModalBtn: document.getElementById('close-modal-btn'),
+    cancelModalBtn: document.getElementById('cancel-modal-btn'),
+    saleForm: document.getElementById('sale-form'),
+    saleIdInput: document.getElementById('sale-id-input'),
+    customerNameInput: document.getElementById('customer-name-input'),
+    productNameInput: document.getElementById('product-name-input'),
+    categorySelect: document.getElementById('category-select'),
+    amountInput: document.getElementById('amount-input'),
+    unitsInput: document.getElementById('units-input'),
+    saleDateInput: document.getElementById('sale-date-input'),
+    paymentMethodSelect: document.getElementById('payment-method-select'),
+    statusSelect: document.getElementById('status-select'),
 
     // Settings Modal
     settingsModal: document.getElementById('settings-modal'),
     closeSettingsModalBtn: document.getElementById('close-settings-modal-btn'),
-    cancelSettingsBtn: document.getElementById('cancel-settings-btn'),
-    settingsForm: document.getElementById('settings-form'),
-    goalCaloriesInput: document.getElementById('goal-calories-input'),
-    goalWaterInput: document.getElementById('goal-water-input'),
-    exportDataBtn: document.getElementById('export-data-btn'),
-    importFileInput: document.getElementById('import-file-input'),
+    closeSettingsBtn: document.getElementById('close-settings-btn'),
+    saveSettingsBtn: document.getElementById('save-settings-btn'),
+    monthlyTargetInput: document.getElementById('monthly-target-input'),
+    exportJsonBtn: document.getElementById('export-json-btn'),
+    exportCsvBtn: document.getElementById('export-csv-btn'),
+    importJsonFile: document.getElementById('import-json-file'),
+    reloadSamplesBtn: document.getElementById('reload-samples-btn'),
     clearAllDataBtn: document.getElementById('clear-all-data-btn'),
 
     // Toast
@@ -126,132 +124,112 @@
   };
 
   // -------------------------------------------------------------------------
-  // Date Utilities
+  // Sample Data Generator (Realistic Enterprise Sales)
   // -------------------------------------------------------------------------
-  function getTodayDateString() {
+  function generateSampleData() {
     const today = new Date();
-    return formatDateToString(today);
-  }
+    const transactions = [];
 
-  function formatDateToString(d) {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
+    const sampleCustomers = [
+      'Acme Global Tech', 'Apex Solutions', 'Starlight Media', 'Nexus Enterprise',
+      'Quantum Logistics', 'CyberShield Inc', 'Vertex Health', 'Horizon Retail',
+      'Solaris Dynamics', 'Beacon Systems', 'Cascade Bio', 'Titan Capital'
+    ];
 
-  function parseDateString(dateStr) {
-    const parts = dateStr.split('-');
-    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-  }
+    const catalog = [
+      { name: 'Enterprise Cloud Suite (Annual)', category: 'Software', basePrice: 4800 },
+      { name: 'Pro Developer Seat (Monthly)', category: 'Subscriptions', basePrice: 240 },
+      { name: 'Hardware Security Key (10-Pack)', category: 'Hardware', basePrice: 550 },
+      { name: 'Cloud Migration & Architecture', category: 'Services', basePrice: 7500 },
+      { name: 'AI Analytics Add-On License', category: 'Software', basePrice: 1850 },
+      { name: 'Server Rack Mount 2U Ultra', category: 'Hardware', basePrice: 3200 },
+      { name: 'Dedicated Support Retainer', category: 'Subscriptions', basePrice: 1200 },
+      { name: 'High-Speed Fiber Transceiver', category: 'Accessories', basePrice: 380 },
+      { name: 'Custom Security Audit & Pentest', category: 'Services', basePrice: 9200 },
+      { name: 'Wireless Ergonomic Sensor Set', category: 'Accessories', basePrice: 190 }
+    ];
 
-  function formatDisplayDate(dateStr) {
-    const d = parseDateString(dateStr);
-    const options = { weekday: 'long', month: 'short', day: 'numeric' };
-    return d.toLocaleDateString('en-US', options);
-  }
+    const paymentMethods = ['Credit Card', 'Wire Transfer', 'Stripe', 'PayPal', 'Check'];
+    const statuses = ['Completed', 'Completed', 'Completed', 'Completed', 'Pending', 'Refunded'];
 
-  function getRelativeDateLabel(dateStr) {
-    const todayStr = getTodayDateString();
-    if (dateStr === todayStr) return 'Today';
+    // Generate 32 realistic transactions across the last 45 days
+    for (let i = 0; i < 32; i++) {
+      const daysAgo = Math.floor(Math.random() * 45);
+      const saleDate = new Date(today);
+      saleDate.setDate(today.getDate() - daysAgo);
 
-    const cur = parseDateString(dateStr);
-    const today = parseDateString(todayStr);
-    const diffTime = cur.getTime() - today.getTime();
-    const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+      const item = catalog[Math.floor(Math.random() * catalog.length)];
+      const customer = sampleCustomers[Math.floor(Math.random() * sampleCustomers.length)];
+      const units = Math.random() > 0.7 ? Math.floor(Math.random() * 4) + 2 : 1;
+      const amount = Math.round(item.basePrice * units * (0.95 + Math.random() * 0.1) * 100) / 100;
+      const status = statuses[Math.floor(Math.random() * statuses.length)];
+      const payment = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
 
-    if (diffDays === -1) return 'Yesterday';
-    if (diffDays === 1) return 'Tomorrow';
-    return dateStr;
+      const dateStr = saleDate.toISOString().split('T')[0];
+      const orderId = 'ORD-' + (9200 + i);
+
+      transactions.push({
+        id: 'txn_' + (1000 + i),
+        orderId: orderId,
+        customer: customer,
+        product: item.name,
+        category: item.category,
+        amount: amount,
+        units: units,
+        date: dateStr,
+        payment: payment,
+        status: status,
+        createdAt: saleDate.getTime()
+      });
+    }
+
+    // Sort by date descending
+    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return transactions;
   }
 
   // -------------------------------------------------------------------------
-  // LocalStorage Data Management
+  // LocalStorage Management
   // -------------------------------------------------------------------------
-  function loadFromStorage() {
+  function loadData() {
     try {
-      const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      if (storedSettings) {
-        state.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(storedSettings) };
-      } else {
-        state.settings = { ...DEFAULT_SETTINGS };
+      const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (savedSettings) {
+        state.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
       }
 
-      const storedWater = localStorage.getItem(STORAGE_KEYS.WATER);
-      state.waterLogs = storedWater ? JSON.parse(storedWater) : {};
-
-      const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
-      if (storedEntries) {
-        state.entries = JSON.parse(storedEntries);
+      const savedTxns = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+      if (savedTxns) {
+        state.transactions = JSON.parse(savedTxns);
       } else {
-        // First time initialization with pleasant starter entries for today
-        state.entries = seedStarterEntries();
-        saveEntries();
+        // First visit: Seed sample sales data
+        state.transactions = generateSampleData();
+        saveTransactions();
       }
     } catch (e) {
-      console.error('Failed to parse localStorage data:', e);
-      state.entries = [];
-      state.settings = { ...DEFAULT_SETTINGS };
-      state.waterLogs = {};
+      console.error('Failed to load from localStorage:', e);
+      state.transactions = generateSampleData();
     }
   }
 
-  function seedStarterEntries() {
-    const today = getTodayDateString();
-    return [
-      {
-        id: 'seed-1',
-        date: today,
-        mealType: 'breakfast',
-        name: 'Oatmeal with Blueberries & Honey',
-        calories: 320,
-        portion: '1 medium bowl',
-        protein: 11,
-        carbs: 58,
-        fat: 5,
-        createdAt: Date.now() - 1000 * 60 * 180
-      },
-      {
-        id: 'seed-2',
-        date: today,
-        mealType: 'breakfast',
-        name: 'Black Coffee with splash of almond milk',
-        calories: 25,
-        portion: '250 ml',
-        protein: 1,
-        carbs: 2,
-        fat: 1,
-        createdAt: Date.now() - 1000 * 60 * 170
-      },
-      {
-        id: 'seed-3',
-        date: today,
-        mealType: 'lunch',
-        name: 'Grilled Chicken Caesar Salad',
-        calories: 480,
-        portion: '1 large plate',
-        protein: 42,
-        carbs: 18,
-        fat: 26,
-        createdAt: Date.now() - 1000 * 60 * 60
-      }
-    ];
-  }
-
-  function saveEntries() {
-    localStorage.setItem(STORAGE_KEYS.ENTRIES, JSON.stringify(state.entries));
+  function saveTransactions() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(state.transactions));
+    } catch (e) {
+      console.error('Error saving transactions:', e);
+    }
   }
 
   function saveSettings() {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings));
-  }
-
-  function saveWaterLogs() {
-    localStorage.setItem(STORAGE_KEYS.WATER, JSON.stringify(state.waterLogs));
+    try {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(state.settings));
+    } catch (e) {
+      console.error('Error saving settings:', e);
+    }
   }
 
   // -------------------------------------------------------------------------
-  // Notifications (Toast)
+  // Toast Notifications
   // -------------------------------------------------------------------------
   let toastTimer = null;
   function showToast(message) {
@@ -264,261 +242,603 @@
   }
 
   // -------------------------------------------------------------------------
-  // Render Main Dashboard & Meals
+  // Filter Utilities
   // -------------------------------------------------------------------------
-  function render() {
-    renderDateSection();
-    renderOverview();
-    renderWaterSection();
-    renderMealLogs();
-  }
+  function getFilteredTransactions() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
 
-  function renderDateSection() {
-    elements.currentDateHeading.textContent = formatDisplayDate(state.currentDate);
-    elements.dateBadge.textContent = getRelativeDateLabel(state.currentDate);
-    elements.datePickerInput.value = state.currentDate;
-  }
+    return state.transactions.filter(item => {
+      const itemDate = new Date(item.date);
 
-  function renderOverview() {
-    const dailyEntries = state.entries.filter(e => e.date === state.currentDate);
-
-    // Sum Calories
-    const totalConsumed = dailyEntries.reduce((sum, item) => sum + (Number(item.calories) || 0), 0);
-    const goal = Number(state.settings.dailyGoal) || 2000;
-    const remaining = goal - totalConsumed;
-
-    elements.totalConsumedVal.textContent = totalConsumed.toLocaleString();
-    elements.dailyGoalVal.textContent = goal.toLocaleString();
-
-    // Progress circle math (radius = 56, circumference = 2 * PI * 56 ≈ 351.86)
-    const CIRCUMFERENCE = 351.86;
-    const percent = goal > 0 ? (totalConsumed / goal) : 0;
-    const offset = CIRCUMFERENCE - Math.min(percent, 1) * CIRCUMFERENCE;
-
-    elements.progressCircle.style.strokeDashoffset = offset;
-
-    // Remaining Calories & Color
-    if (remaining >= 0) {
-      elements.remainingCalorieVal.textContent = remaining.toLocaleString();
-      elements.remainingCalorieLabel.textContent = 'kcal left';
-      elements.progressCircle.style.stroke = '#ea580c';
-      elements.linearProgressBar.style.background = 'linear-gradient(90deg, #ea580c 0%, #f97316 100%)';
-      elements.calorieStatusLabel.textContent = 'On track';
-      elements.calorieStatusLabel.style.color = '#16a34a';
-    } else {
-      elements.remainingCalorieVal.textContent = Math.abs(remaining).toLocaleString();
-      elements.remainingCalorieLabel.textContent = 'kcal over budget';
-      elements.progressCircle.style.stroke = '#dc2626';
-      elements.linearProgressBar.style.background = '#dc2626';
-      elements.calorieStatusLabel.textContent = 'Over budget';
-      elements.calorieStatusLabel.style.color = '#dc2626';
-    }
-
-    // Linear bar
-    const visualPercent = Math.min(Math.round(percent * 100), 100);
-    elements.linearProgressBar.style.width = `${visualPercent}%`;
-    elements.progressPercentageLabel.textContent = `${Math.round(percent * 100)}% of daily target`;
-
-    // Sum Macros
-    const totalProtein = dailyEntries.reduce((sum, item) => sum + (Number(item.protein) || 0), 0);
-    const totalCarbs = dailyEntries.reduce((sum, item) => sum + (Number(item.carbs) || 0), 0);
-    const totalFat = dailyEntries.reduce((sum, item) => sum + (Number(item.fat) || 0), 0);
-
-    const proteinCalories = totalProtein * 4;
-    const carbsCalories = totalCarbs * 4;
-    const fatCalories = totalFat * 9;
-    const macroCaloriesTotal = proteinCalories + carbsCalories + fatCalories;
-
-    elements.proteinGrams.textContent = (Math.round(totalProtein * 10) / 10).toLocaleString();
-    elements.carbsGrams.textContent = (Math.round(totalCarbs * 10) / 10).toLocaleString();
-    elements.fatGrams.textContent = (Math.round(totalFat * 10) / 10).toLocaleString();
-
-    elements.proteinCals.textContent = `${Math.round(proteinCalories)} kcal (4 kcal/g)`;
-    elements.carbsCals.textContent = `${Math.round(carbsCalories)} kcal (4 kcal/g)`;
-    elements.fatCals.textContent = `${Math.round(fatCalories)} kcal (9 kcal/g)`;
-
-    // Macro proportional distribution bar
-    if (macroCaloriesTotal > 0) {
-      elements.proteinBarFill.style.width = `${Math.round((proteinCalories / macroCaloriesTotal) * 100)}%`;
-      elements.carbsBarFill.style.width = `${Math.round((carbsCalories / macroCaloriesTotal) * 100)}%`;
-      elements.fatBarFill.style.width = `${Math.round((fatCalories / macroCaloriesTotal) * 100)}%`;
-    } else {
-      elements.proteinBarFill.style.width = '0%';
-      elements.carbsBarFill.style.width = '0%';
-      elements.fatBarFill.style.width = '0%';
-    }
-  }
-
-  function renderWaterSection() {
-    const currentWater = state.waterLogs[state.currentDate] || 0;
-    const goalWater = Number(state.settings.waterGoal) || 2000;
-
-    elements.waterCurrentVal.textContent = currentWater.toLocaleString();
-    elements.waterGoalVal.textContent = goalWater.toLocaleString();
-
-    const percent = Math.min(Math.round((currentWater / goalWater) * 100), 100);
-    elements.waterProgressBar.style.width = `${percent}%`;
-  }
-
-  function renderMealLogs() {
-    const meals = ['breakfast', 'lunch', 'dinner', 'snacks'];
-    const query = state.searchQuery.trim().toLowerCase();
-
-    // Group items for the selected date
-    const dayEntries = state.entries.filter(e => e.date === state.currentDate);
-
-    meals.forEach(meal => {
-      let items = dayEntries.filter(e => e.mealType === meal);
-      const totalMealCalories = items.reduce((sum, item) => sum + (Number(item.calories) || 0), 0);
-      elements.mealTotals[meal].textContent = totalMealCalories.toLocaleString();
-
-      if (query) {
-        items = items.filter(e => e.name.toLowerCase().includes(query) || (e.portion && e.portion.toLowerCase().includes(query)));
+      // Time Range Filter
+      if (state.filters.timeRange === 'week') {
+        const diffDays = (now - itemDate) / (1000 * 60 * 60 * 24);
+        if (diffDays > 7 || diffDays < 0) return false;
+      } else if (state.filters.timeRange === 'month') {
+        if (itemDate.getFullYear() !== currentYear || itemDate.getMonth() !== currentMonth) return false;
+      } else if (state.filters.timeRange === 'quarter') {
+        const diffDays = (now - itemDate) / (1000 * 60 * 60 * 24);
+        if (diffDays > 90 || diffDays < 0) return false;
+      } else if (state.filters.timeRange === 'year') {
+        if (itemDate.getFullYear() !== currentYear) return false;
       }
 
-      const listContainer = elements.mealLists[meal];
-      listContainer.innerHTML = '';
-
-      if (items.length === 0) {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'empty-meal-placeholder';
-        emptyDiv.textContent = query ? `No matching foods found in ${meal}` : `No ${meal} logged yet`;
-        listContainer.appendChild(emptyDiv);
-      } else {
-        items.forEach(item => {
-          const row = createFoodItemElement(item);
-          listContainer.appendChild(row);
-        });
+      // Category Filter
+      if (state.filters.category !== 'all' && item.category !== state.filters.category) {
+        return false;
       }
+
+      // Status Filter
+      if (state.filters.status !== 'all' && item.status !== state.filters.status) {
+        return false;
+      }
+
+      // Search Query
+      if (state.filters.search) {
+        const q = state.filters.search.toLowerCase();
+        const matchesCustomer = item.customer.toLowerCase().includes(q);
+        const matchesProduct = item.product.toLowerCase().includes(q);
+        const matchesOrderId = item.orderId.toLowerCase().includes(q);
+        if (!matchesCustomer && !matchesProduct && !matchesOrderId) return false;
+      }
+
+      return true;
     });
   }
 
-  function createFoodItemElement(item) {
-    const row = document.createElement('div');
-    row.className = 'food-item-row';
-    row.dataset.id = item.id;
+  // -------------------------------------------------------------------------
+  // Render KPI Metrics
+  // -------------------------------------------------------------------------
+  function renderKPIs(filteredTxns) {
+    // Only completed orders count towards recognized revenue
+    const completedTxns = filteredTxns.filter(t => t.status === 'Completed');
+    const totalRevenue = completedTxns.reduce((acc, t) => acc + Number(t.amount || 0), 0);
+    const totalOrders = filteredTxns.length;
+    const aov = completedTxns.length > 0 ? (totalRevenue / completedTxns.length) : 0;
 
-    // Left info
-    const leftWrap = document.createElement('div');
-    leftWrap.className = 'food-item-left';
+    elements.kpiTotalRevenue.textContent = Math.round(totalRevenue).toLocaleString();
+    elements.kpiTotalOrders.textContent = totalOrders.toLocaleString();
+    elements.kpiCompletedRatio.textContent = `${completedTxns.length} completed (${totalOrders - completedTxns.length} pending/refunded)`;
+    elements.kpiAov.textContent = aov.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const title = document.createElement('div');
-    title.className = 'food-item-title';
-    title.textContent = item.name;
-    leftWrap.appendChild(title);
+    // Target Quota Calculation (based on current month's completed revenue)
+    const now = new Date();
+    const monthTxns = state.transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && t.status === 'Completed';
+    });
+    const monthRevenue = monthTxns.reduce((acc, t) => acc + Number(t.amount || 0), 0);
+    const quota = Number(state.settings.monthlyQuota) || 120000;
+    const percent = Math.min(Math.round((monthRevenue / quota) * 100), 100);
+    const remaining = Math.max(0, quota - monthRevenue);
 
-    const details = document.createElement('div');
-    details.className = 'food-item-details';
-
-    if (item.portion) {
-      const portionSpan = document.createElement('span');
-      portionSpan.className = 'food-item-portion';
-      portionSpan.textContent = item.portion;
-      details.appendChild(portionSpan);
+    elements.targetProgressPercent.textContent = `${percent}%`;
+    elements.targetProgressFill.style.width = `${percent}%`;
+    if (remaining > 0) {
+      elements.targetRemainingLabel.textContent = `$${Math.round(remaining).toLocaleString()} left to reach quota`;
+    } else {
+      elements.targetRemainingLabel.textContent = `🎯 Quota exceeded by $${Math.round(monthRevenue - quota).toLocaleString()}!`;
     }
-
-    const hasMacros = item.protein > 0 || item.carbs > 0 || item.fat > 0;
-    if (hasMacros) {
-      if (item.protein > 0) {
-        const pSpan = document.createElement('span');
-        pSpan.className = 'food-item-macro-tag tag-p';
-        pSpan.textContent = `P: ${item.protein}g`;
-        details.appendChild(pSpan);
-      }
-      if (item.carbs > 0) {
-        const cSpan = document.createElement('span');
-        cSpan.className = 'food-item-macro-tag tag-c';
-        cSpan.textContent = `C: ${item.carbs}g`;
-        details.appendChild(cSpan);
-      }
-      if (item.fat > 0) {
-        const fSpan = document.createElement('span');
-        fSpan.className = 'food-item-macro-tag tag-f';
-        fSpan.textContent = `F: ${item.fat}g`;
-        details.appendChild(fSpan);
-      }
-    }
-
-    leftWrap.appendChild(details);
-
-    // Right info & actions
-    const rightWrap = document.createElement('div');
-    rightWrap.className = 'food-item-right';
-
-    const calSpan = document.createElement('div');
-    calSpan.className = 'food-item-calories';
-    calSpan.textContent = `${Number(item.calories).toLocaleString()} kcal`;
-    rightWrap.appendChild(calSpan);
-
-    const actionsWrap = document.createElement('div');
-    actionsWrap.className = 'food-item-actions';
-
-    const editBtn = document.createElement('button');
-    editBtn.className = 'action-icon-btn';
-    editBtn.title = 'Edit item';
-    editBtn.innerHTML = '✏️';
-    editBtn.addEventListener('click', () => openEditFoodModal(item));
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'action-icon-btn delete-btn';
-    deleteBtn.title = 'Delete item';
-    deleteBtn.innerHTML = '🗑️';
-    deleteBtn.addEventListener('click', () => deleteFoodItem(item.id));
-
-    actionsWrap.appendChild(editBtn);
-    actionsWrap.appendChild(deleteBtn);
-    rightWrap.appendChild(actionsWrap);
-
-    row.appendChild(leftWrap);
-    row.appendChild(rightWrap);
-
-    return row;
   }
 
   // -------------------------------------------------------------------------
-  // Modals Management
+  // Render Pure Vanilla SVG Revenue Trend Chart
   // -------------------------------------------------------------------------
-  function openAddFoodModal(presetMealType = 'breakfast') {
-    state.editingEntryId = null;
-    elements.foodModalTitle.textContent = 'Log Food Item';
-    elements.entryIdInput.value = '';
-    elements.foodForm.reset();
-    elements.mealTypeSelect.value = presetMealType;
-    elements.foodModal.classList.add('open');
-    elements.foodModal.setAttribute('aria-hidden', 'false');
-    elements.foodNameInput.focus();
+  function renderTrendChart(filteredTxns) {
+    const svg = elements.revenueTrendSvg;
+    svg.innerHTML = '';
+
+    // Group completed sales by date
+    const dateMap = {};
+    filteredTxns.forEach(t => {
+      if (t.status === 'Completed') {
+        dateMap[t.date] = (dateMap[t.date] || 0) + Number(t.amount);
+      }
+    });
+
+    const dates = Object.keys(dateMap).sort();
+
+    // If less than 2 data points, show fallback message inside SVG
+    if (dates.length < 2) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', '350');
+      text.setAttribute('y', '120');
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('fill', '#94a3b8');
+      text.setAttribute('font-size', '14');
+      text.setAttribute('font-weight', '600');
+      text.textContent = 'Not enough completed sales data for this period to graph';
+      svg.appendChild(text);
+      return;
+    }
+
+    const dataPoints = dates.map(d => ({ date: d, amount: dateMap[d] }));
+
+    // Chart Dimensions
+    const width = 700;
+    const height = 240;
+    const paddingLeft = 65;
+    const paddingRight = 30;
+    const paddingTop = 25;
+    const paddingBottom = 40;
+
+    const chartWidth = width - paddingLeft - paddingRight;
+    const chartHeight = height - paddingTop - paddingBottom;
+
+    // Calculate Max Value (round up nicely)
+    const maxVal = Math.max(...dataPoints.map(p => p.amount)) * 1.15 || 1000;
+
+    // Defs for area fill gradient
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `
+      <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#2563eb" stop-opacity="0.28" />
+        <stop offset="100%" stop-color="#2563eb" stop-opacity="0.01" />
+      </linearGradient>
+    `;
+    svg.appendChild(defs);
+
+    // Draw horizontal grid lines & Y-Axis labels (4 divisions)
+    const gridCount = 4;
+    for (let i = 0; i <= gridCount; i++) {
+      const y = paddingTop + (chartHeight / gridCount) * i;
+      const val = Math.round(maxVal - (maxVal / gridCount) * i);
+
+      // Grid line
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', paddingLeft);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', width - paddingRight);
+      line.setAttribute('y2', y);
+      line.setAttribute('stroke', '#f1f5f9');
+      line.setAttribute('stroke-width', '1');
+      svg.appendChild(line);
+
+      // Y-axis Label
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', paddingLeft - 10);
+      label.setAttribute('y', y + 4);
+      label.setAttribute('text-anchor', 'end');
+      label.setAttribute('font-size', '10');
+      label.setAttribute('font-weight', '600');
+      label.setAttribute('fill', '#94a3b8');
+      label.textContent = '$' + (val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val);
+      svg.appendChild(label);
+    }
+
+    // Compute coordinate points
+    const points = dataPoints.map((pt, idx) => {
+      const x = paddingLeft + (idx / (dataPoints.length - 1)) * chartWidth;
+      const y = paddingTop + chartHeight - (pt.amount / maxVal) * chartHeight;
+      return { x, y, pt };
+    });
+
+    // Build SVG Path strings
+    const pathD = points.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, '');
+    const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${paddingTop + chartHeight} L ${points[0].x.toFixed(1)} ${paddingTop + chartHeight} Z`;
+
+    // Area Fill
+    const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    areaPath.setAttribute('d', areaD);
+    areaPath.setAttribute('fill', 'url(#revenueGradient)');
+    svg.appendChild(areaPath);
+
+    // Stroke Line
+    const strokePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    strokePath.setAttribute('d', pathD);
+    strokePath.setAttribute('fill', 'none');
+    strokePath.setAttribute('stroke', '#2563eb');
+    strokePath.setAttribute('stroke-width', '2.5');
+    strokePath.setAttribute('stroke-linecap', 'round');
+    strokePath.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(strokePath);
+
+    // X-Axis date labels & Interactive Circles
+    const step = Math.max(1, Math.floor(dataPoints.length / 6));
+    points.forEach((p, idx) => {
+      // Date label on X axis
+      if (idx % step === 0 || idx === points.length - 1) {
+        const dateLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        dateLabel.setAttribute('x', p.x);
+        dateLabel.setAttribute('y', paddingTop + chartHeight + 20);
+        dateLabel.setAttribute('text-anchor', 'middle');
+        dateLabel.setAttribute('font-size', '10');
+        dateLabel.setAttribute('font-weight', '600');
+        dateLabel.setAttribute('fill', '#94a3b8');
+        const parts = p.pt.date.split('-');
+        dateLabel.textContent = `${parts[1]}/${parts[2]}`;
+        svg.appendChild(dateLabel);
+      }
+
+      // Interactive hover circle point
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', p.x);
+      circle.setAttribute('cy', p.y);
+      circle.setAttribute('r', '4');
+      circle.setAttribute('fill', '#ffffff');
+      circle.setAttribute('stroke', '#2563eb');
+      circle.setAttribute('stroke-width', '2.5');
+      circle.style.cursor = 'pointer';
+      circle.style.transition = 'r 0.15s ease, stroke-width 0.15s ease';
+
+      circle.addEventListener('mouseenter', (e) => {
+        circle.setAttribute('r', '7');
+        circle.setAttribute('stroke-width', '3');
+        const rect = elements.trendChartContainer.getBoundingClientRect();
+        const tooltipX = (p.x / width) * rect.width;
+        const tooltipY = (p.y / height) * rect.height;
+
+        elements.chartTooltip.innerHTML = `<strong>${p.pt.date}</strong><br>$${Math.round(p.pt.amount).toLocaleString()} Revenue`;
+        elements.chartTooltip.style.left = `${tooltipX}px`;
+        elements.chartTooltip.style.top = `${tooltipY}px`;
+        elements.chartTooltip.style.display = 'block';
+      });
+
+      circle.addEventListener('mouseleave', () => {
+        circle.setAttribute('r', '4');
+        circle.setAttribute('stroke-width', '2.5');
+        elements.chartTooltip.style.display = 'none';
+      });
+
+      svg.appendChild(circle);
+    });
   }
 
-  function openEditFoodModal(item) {
-    state.editingEntryId = item.id;
-    elements.foodModalTitle.textContent = 'Edit Food Item';
-    elements.entryIdInput.value = item.id;
-    elements.foodNameInput.value = item.name || '';
-    elements.mealTypeSelect.value = item.mealType || 'breakfast';
-    elements.caloriesInput.value = item.calories ?? '';
-    elements.servingInput.value = item.portion || '';
-    elements.proteinInput.value = item.protein !== undefined && item.protein !== null ? item.protein : '';
-    elements.carbsInput.value = item.carbs !== undefined && item.carbs !== null ? item.carbs : '';
-    elements.fatInput.value = item.fat !== undefined && item.fat !== null ? item.fat : '';
+  // -------------------------------------------------------------------------
+  // Render Category Donut Chart
+  // -------------------------------------------------------------------------
+  function renderCategoryChart(filteredTxns) {
+    const group = elements.donutSegmentsGroup;
+    group.innerHTML = '';
+    elements.categoryLegendList.innerHTML = '';
 
-    elements.foodModal.classList.add('open');
-    elements.foodModal.setAttribute('aria-hidden', 'false');
-    elements.foodNameInput.focus();
+    const catTotals = {
+      'Software': 0,
+      'Hardware': 0,
+      'Services': 0,
+      'Subscriptions': 0,
+      'Accessories': 0
+    };
+
+    let total = 0;
+    filteredTxns.forEach(t => {
+      const amt = Number(t.amount || 0);
+      if (catTotals[t.category] !== undefined) {
+        catTotals[t.category] += amt;
+      } else {
+        catTotals['Software'] += amt;
+      }
+      total += amt;
+    });
+
+    elements.donutCenterTotal.textContent = '$' + (total >= 1000 ? (total / 1000).toFixed(0) + 'k' : Math.round(total));
+
+    // Circumference for r=65 is 2 * PI * 65 ≈ 408.4
+    const radius = 65;
+    const circumference = 2 * Math.PI * radius;
+    let accumulatedOffset = 0;
+
+    Object.keys(catTotals).forEach(cat => {
+      const amount = catTotals[cat];
+      const percent = total > 0 ? (amount / total) : 0;
+      const color = CATEGORY_COLORS[cat] || '#2563eb';
+
+      if (percent > 0) {
+        const segmentLength = percent * circumference;
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '80');
+        circle.setAttribute('cy', '80');
+        circle.setAttribute('r', radius.toString());
+        circle.setAttribute('fill', 'none');
+        circle.setAttribute('stroke', color);
+        circle.setAttribute('stroke-width', '18');
+        circle.setAttribute('stroke-dasharray', `${segmentLength.toFixed(1)} ${(circumference - segmentLength).toFixed(1)}`);
+        circle.setAttribute('stroke-dashoffset', (-accumulatedOffset).toFixed(1));
+        group.appendChild(circle);
+
+        accumulatedOffset += segmentLength;
+      }
+
+      // Legend Item
+      const itemEl = document.createElement('div');
+      itemEl.className = 'category-legend-item';
+      itemEl.innerHTML = `
+        <div class="category-legend-info">
+          <span class="cat-color-chip" style="background-color: ${color}"></span>
+          <span class="cat-name">${cat}</span>
+        </div>
+        <div class="category-legend-stats">
+          <span class="cat-amount">$${Math.round(amount).toLocaleString()}</span>
+          <span class="cat-percent">${Math.round(percent * 100)}%</span>
+        </div>
+      `;
+      elements.categoryLegendList.appendChild(itemEl);
+    });
   }
 
-  function closeFoodModal() {
-    elements.foodModal.classList.remove('open');
-    elements.foodModal.setAttribute('aria-hidden', 'true');
-    elements.foodForm.reset();
-    state.editingEntryId = null;
+  // -------------------------------------------------------------------------
+  // Render Leaderboard & Payment Methods
+  // -------------------------------------------------------------------------
+  function renderInsights(filteredTxns) {
+    // 1. Top Products
+    const productTotals = {};
+    filteredTxns.forEach(t => {
+      productTotals[t.product] = (productTotals[t.product] || 0) + Number(t.amount);
+    });
+
+    const sortedProducts = Object.keys(productTotals)
+      .map(name => ({ name, total: productTotals[name] }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 4);
+
+    const maxProductVal = sortedProducts.length > 0 ? sortedProducts[0].total : 1;
+    elements.topProductsList.innerHTML = '';
+
+    if (sortedProducts.length === 0) {
+      elements.topProductsList.innerHTML = '<div class="empty-state-text" style="color:#94a3b8;font-size:13px;padding:12px;">No products sold in this period</div>';
+    } else {
+      sortedProducts.forEach((prod, index) => {
+        const row = document.createElement('div');
+        row.className = 'leaderboard-item';
+        const pct = Math.round((prod.total / maxProductVal) * 100);
+        row.innerHTML = `
+          <div class="rank-badge rank-${index + 1}">${index + 1}</div>
+          <div class="product-info-wrap">
+            <span class="product-title">${prod.name}</span>
+            <div class="product-progress-track">
+              <div class="product-progress-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+          <div class="product-amount">$${Math.round(prod.total).toLocaleString()}</div>
+        `;
+        elements.topProductsList.appendChild(row);
+      });
+    }
+
+    // 2. Payment Methods Breakdown
+    const paymentTotals = {};
+    let totalAll = 0;
+    filteredTxns.forEach(t => {
+      const amt = Number(t.amount || 0);
+      paymentTotals[t.payment] = (paymentTotals[t.payment] || 0) + amt;
+      totalAll += amt;
+    });
+
+    elements.paymentMethodsList.innerHTML = '';
+    const paymentMethods = ['Credit Card', 'Wire Transfer', 'Stripe', 'PayPal', 'Check'];
+
+    paymentMethods.forEach(method => {
+      const amt = paymentTotals[method] || 0;
+      const pct = totalAll > 0 ? Math.round((amt / totalAll) * 100) : 0;
+      const icon = PAYMENT_ICONS[method] || '💳';
+
+      const row = document.createElement('div');
+      row.className = 'payment-row';
+      row.innerHTML = `
+        <div class="payment-meta">
+          <span class="payment-name">${icon} ${method}</span>
+          <span class="payment-stat">$${Math.round(amt).toLocaleString()} (${pct}%)</span>
+        </div>
+        <div class="payment-track">
+          <div class="payment-fill" style="width: ${pct}%; background-color: #2563eb;"></div>
+        </div>
+      `;
+      elements.paymentMethodsList.appendChild(row);
+    });
   }
 
+  // -------------------------------------------------------------------------
+  // Render Transactions Table
+  // -------------------------------------------------------------------------
+  function renderTable(filteredTxns) {
+    const tbody = elements.transactionsTableBody;
+    tbody.innerHTML = '';
+
+    // Apply Sorting
+    const sorted = [...filteredTxns].sort((a, b) => {
+      let valA = a[state.sort.column];
+      let valB = b[state.sort.column];
+
+      if (state.sort.column === 'amount') {
+        valA = Number(valA);
+        valB = Number(valB);
+      } else if (state.sort.column === 'date') {
+        valA = new Date(valA).getTime();
+        valB = new Date(valB).getTime();
+      } else {
+        valA = (valA || '').toString().toLowerCase();
+        valB = (valB || '').toString().toLowerCase();
+      }
+
+      if (valA < valB) return state.sort.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return state.sort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    elements.tableCountLabel.textContent = `Showing ${sorted.length} transactions`;
+
+    if (sorted.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="9" style="text-align:center; padding:32px; color:#94a3b8; font-style:italic;">No transactions match your current search and filter settings.</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    sorted.forEach(txn => {
+      const tr = document.createElement('tr');
+
+      // Status pill class
+      const statusClass = txn.status === 'Completed'
+        ? 'status-completed'
+        : txn.status === 'Pending'
+        ? 'status-pending'
+        : 'status-refunded';
+
+      // Customer avatar initials
+      const initials = txn.customer.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+      tr.innerHTML = `
+        <td><span class="order-id-badge">${txn.orderId}</span></td>
+        <td>
+          <div class="customer-cell">
+            <div class="customer-avatar">${initials}</div>
+            <span class="customer-name">${txn.customer}</span>
+          </div>
+        </td>
+        <td>${txn.product}</td>
+        <td><span class="category-tag">${txn.category}</span></td>
+        <td>${txn.date}</td>
+        <td>${PAYMENT_ICONS[txn.payment] || '💳'} ${txn.payment}</td>
+        <td><span class="status-pill ${statusClass}">${txn.status}</span></td>
+        <td class="text-right"><span class="amount-val">$${Number(txn.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
+        <td class="text-center">
+          <div class="action-btns-wrap">
+            <button class="row-action-btn edit-btn" title="Edit order" data-id="${txn.id}">✏️</button>
+            <button class="row-action-btn del-btn" title="Delete order" data-id="${txn.id}">🗑️</button>
+          </div>
+        </td>
+      `;
+
+      // Event Listeners for actions
+      tr.querySelector('.edit-btn').addEventListener('click', () => openEditSaleModal(txn));
+      tr.querySelector('.del-btn').addEventListener('click', () => deleteSale(txn.id));
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Main Render Orchestrator
+  // -------------------------------------------------------------------------
+  function render() {
+    const filteredTxns = getFilteredTransactions();
+    renderKPIs(filteredTxns);
+    renderTrendChart(filteredTxns);
+    renderCategoryChart(filteredTxns);
+    renderInsights(filteredTxns);
+    renderTable(filteredTxns);
+  }
+
+  // -------------------------------------------------------------------------
+  // Modals & Form Handlers
+  // -------------------------------------------------------------------------
+  function openNewSaleModal() {
+    state.editingId = null;
+    elements.modalTitle.textContent = 'Record New Sale';
+    elements.saleForm.reset();
+    elements.saleIdInput.value = '';
+    elements.saleDateInput.value = new Date().toISOString().split('T')[0];
+    elements.unitsInput.value = '1';
+    elements.saleModal.classList.add('open');
+    elements.saleModal.setAttribute('aria-hidden', 'false');
+    elements.customerNameInput.focus();
+  }
+
+  function openEditSaleModal(txn) {
+    state.editingId = txn.id;
+    elements.modalTitle.textContent = `Edit Sale (${txn.orderId})`;
+    elements.saleIdInput.value = txn.id;
+    elements.customerNameInput.value = txn.customer;
+    elements.productNameInput.value = txn.product;
+    elements.categorySelect.value = txn.category;
+    elements.amountInput.value = txn.amount;
+    elements.unitsInput.value = txn.units || 1;
+    elements.saleDateInput.value = txn.date;
+    elements.paymentMethodSelect.value = txn.payment;
+    elements.statusSelect.value = txn.status;
+
+    elements.saleModal.classList.add('open');
+    elements.saleModal.setAttribute('aria-hidden', 'false');
+    elements.customerNameInput.focus();
+  }
+
+  function closeModal() {
+    elements.saleModal.classList.remove('open');
+    elements.saleModal.setAttribute('aria-hidden', 'true');
+    elements.saleForm.reset();
+    state.editingId = null;
+  }
+
+  function handleSaleFormSubmit(e) {
+    e.preventDefault();
+
+    const customer = elements.customerNameInput.value.trim();
+    const product = elements.productNameInput.value.trim();
+    const category = elements.categorySelect.value;
+    const amount = parseFloat(elements.amountInput.value);
+    const units = parseInt(elements.unitsInput.value, 10) || 1;
+    const date = elements.saleDateInput.value;
+    const payment = elements.paymentMethodSelect.value;
+    const status = elements.statusSelect.value;
+
+    if (!customer || !product || isNaN(amount) || amount <= 0 || !date) {
+      showToast('Please fill out all required fields with valid values.');
+      return;
+    }
+
+    if (state.editingId) {
+      // Edit existing
+      const index = state.transactions.findIndex(t => t.id === state.editingId);
+      if (index !== -1) {
+        state.transactions[index] = {
+          ...state.transactions[index],
+          customer,
+          product,
+          category,
+          amount,
+          units,
+          date,
+          payment,
+          status
+        };
+        showToast(`Updated order ${state.transactions[index].orderId}`);
+      }
+    } else {
+      // Create new
+      const orderNum = Math.floor(Math.random() * 9000) + 1000;
+      const newTxn = {
+        id: 'txn_' + Date.now(),
+        orderId: `ORD-${orderNum}`,
+        customer,
+        product,
+        category,
+        amount,
+        units,
+        date,
+        payment,
+        status,
+        createdAt: Date.now()
+      };
+      state.transactions.unshift(newTxn);
+      showToast(`Logged new sale: $${amount.toLocaleString()} (${customer})`);
+    }
+
+    saveTransactions();
+    closeModal();
+    render();
+  }
+
+  function deleteSale(id) {
+    const item = state.transactions.find(t => t.id === id);
+    if (!item) return;
+
+    if (confirm(`Are you sure you want to delete order ${item.orderId} for ${item.customer}?`)) {
+      state.transactions = state.transactions.filter(t => t.id !== id);
+      saveTransactions();
+      showToast(`Deleted order ${item.orderId}`);
+      render();
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Settings & Data Export / Import
+  // -------------------------------------------------------------------------
   function openSettingsModal() {
-    elements.goalCaloriesInput.value = state.settings.dailyGoal;
-    elements.goalWaterInput.value = state.settings.waterGoal;
+    elements.monthlyTargetInput.value = state.settings.monthlyQuota || 120000;
     elements.settingsModal.classList.add('open');
     elements.settingsModal.setAttribute('aria-hidden', 'false');
-    elements.goalCaloriesInput.focus();
   }
 
   function closeSettingsModal() {
@@ -526,149 +846,67 @@
     elements.settingsModal.setAttribute('aria-hidden', 'true');
   }
 
-  // -------------------------------------------------------------------------
-  // Food Items Operations
-  // -------------------------------------------------------------------------
-  function handleFoodFormSubmit(e) {
-    e.preventDefault();
-
-    const name = elements.foodNameInput.value.trim();
-    const mealType = elements.mealTypeSelect.value;
-    const calories = Math.round(Number(elements.caloriesInput.value));
-    const portion = elements.servingInput.value.trim();
-    const protein = elements.proteinInput.value !== '' ? parseFloat(elements.proteinInput.value) : 0;
-    const carbs = elements.carbsInput.value !== '' ? parseFloat(elements.carbsInput.value) : 0;
-    const fat = elements.fatInput.value !== '' ? parseFloat(elements.fatInput.value) : 0;
-
-    if (!name || isNaN(calories) || calories < 0) {
-      showToast('Please enter a valid food name and calories.');
-      return;
+  function handleSaveSettings() {
+    const newQuota = parseInt(elements.monthlyTargetInput.value, 10);
+    if (newQuota > 0) {
+      state.settings.monthlyQuota = newQuota;
+      saveSettings();
+      showToast('Monthly target quota saved!');
+      closeSettingsModal();
+      render();
     }
-
-    if (state.editingEntryId) {
-      // Edit existing
-      const index = state.entries.findIndex(item => item.id === state.editingEntryId);
-      if (index !== -1) {
-        state.entries[index] = {
-          ...state.entries[index],
-          name,
-          mealType,
-          calories,
-          portion,
-          protein: Math.max(0, protein),
-          carbs: Math.max(0, carbs),
-          fat: Math.max(0, fat)
-        };
-        showToast(`Updated "${name}"`);
-      }
-    } else {
-      // Create new
-      const newEntry = {
-        id: 'entry_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-        date: state.currentDate,
-        name,
-        mealType,
-        calories,
-        portion,
-        protein: Math.max(0, protein),
-        carbs: Math.max(0, carbs),
-        fat: Math.max(0, fat),
-        createdAt: Date.now()
-      };
-      state.entries.push(newEntry);
-      showToast(`Added ${calories} kcal (${name})`);
-    }
-
-    saveEntries();
-    closeFoodModal();
-    render();
   }
 
-  function deleteFoodItem(id) {
-    const item = state.entries.find(e => e.id === id);
-    if (!item) return;
-
-    state.entries = state.entries.filter(e => e.id !== id);
-    saveEntries();
-    showToast(`Removed "${item.name}"`);
-    render();
-  }
-
-  function addQuickCalories(calories) {
-    const newEntry = {
-      id: 'quick_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-      date: state.currentDate,
-      name: `Quick Calorie Boost (+${calories} kcal)`,
-      mealType: 'snacks',
-      calories: calories,
-      portion: '',
-      protein: 0,
-      carbs: 0,
-      fat: 0,
-      createdAt: Date.now()
-    };
-    state.entries.push(newEntry);
-    saveEntries();
-    showToast(`Added +${calories} kcal to Snacks!`);
-    render();
-  }
-
-  // -------------------------------------------------------------------------
-  // Water Tracker Operations
-  // -------------------------------------------------------------------------
-  function addWater(amount) {
-    const current = state.waterLogs[state.currentDate] || 0;
-    state.waterLogs[state.currentDate] = Math.max(0, current + amount);
-    saveWaterLogs();
-    showToast(`Hydration: +${amount} ml logged`);
-    renderWaterSection();
-  }
-
-  function resetWater() {
-    state.waterLogs[state.currentDate] = 0;
-    saveWaterLogs();
-    showToast('Water intake for today reset to 0 ml');
-    renderWaterSection();
-  }
-
-  // -------------------------------------------------------------------------
-  // Settings & Data Export/Import
-  // -------------------------------------------------------------------------
-  function handleSettingsSubmit(e) {
-    e.preventDefault();
-    const newCalorieGoal = parseInt(elements.goalCaloriesInput.value, 10);
-    const newWaterGoal = parseInt(elements.goalWaterInput.value, 10);
-
-    if (newCalorieGoal > 0) state.settings.dailyGoal = newCalorieGoal;
-    if (newWaterGoal > 0) state.settings.waterGoal = newWaterGoal;
-
-    saveSettings();
-    closeSettingsModal();
-    showToast('Goals updated successfully!');
-    render();
-  }
-
-  function exportBackup() {
-    const backupData = {
+  function exportJSON() {
+    const payload = {
       version: 1,
       exportDate: new Date().toISOString(),
       settings: state.settings,
-      waterLogs: state.waterLogs,
-      entries: state.entries
+      transactions: state.transactions
     };
 
-    const jsonString = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `nutritrack_backup_${getTodayDateString()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', `salespulse_backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
 
-    showToast('Data backup exported successfully!');
+    showToast('JSON backup exported successfully!');
   }
 
-  function handleImportFile(e) {
+  function exportCSV() {
+    if (state.transactions.length === 0) {
+      showToast('No sales data to export.');
+      return;
+    }
+
+    const headers = ['Order ID', 'Customer', 'Product', 'Category', 'Units', 'Amount', 'Date', 'Payment', 'Status'];
+    const rows = state.transactions.map(t => [
+      `"${t.orderId}"`,
+      `"${t.customer.replace(/"/g, '""')}"`,
+      `"${t.product.replace(/"/g, '""')}"`,
+      `"${t.category}"`,
+      t.units || 1,
+      t.amount,
+      `"${t.date}"`,
+      `"${t.payment}"`,
+      `"${t.status}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', encodeURI(csvContent));
+    dlAnchor.setAttribute('download', `sales_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+
+    showToast('CSV spreadsheet exported successfully!');
+  }
+
+  function handleImportJSON(e) {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -676,146 +914,140 @@
     reader.onload = function (event) {
       try {
         const imported = JSON.parse(event.target.result);
-        if (Array.isArray(imported.entries)) {
-          state.entries = imported.entries;
-          saveEntries();
+        if (Array.isArray(imported.transactions)) {
+          state.transactions = imported.transactions;
+          saveTransactions();
         }
-        if (imported.settings && typeof imported.settings === 'object') {
+        if (imported.settings) {
           state.settings = { ...DEFAULT_SETTINGS, ...imported.settings };
           saveSettings();
         }
-        if (imported.waterLogs && typeof imported.waterLogs === 'object') {
-          state.waterLogs = imported.waterLogs;
-          saveWaterLogs();
-        }
-
-        showToast('Backup restored successfully!');
+        showToast('Sales data restored from backup!');
         closeSettingsModal();
         render();
       } catch (err) {
-        console.error('Import parse error:', err);
         showToast('Invalid backup file. Could not import.');
       }
-      elements.importFileInput.value = '';
+      elements.importJsonFile.value = '';
     };
     reader.readAsText(file);
   }
 
+  function restoreSamples() {
+    if (confirm('Reset transactions to factory sample dataset?')) {
+      state.transactions = generateSampleData();
+      saveTransactions();
+      showToast('Sample dataset reloaded.');
+      closeSettingsModal();
+      render();
+    }
+  }
+
   function clearAllData() {
-    const confirmed = window.confirm('Are you sure you want to delete ALL saved logs and reset to defaults? This cannot be undone.');
-    if (!confirmed) return;
-
-    localStorage.removeItem(STORAGE_KEYS.ENTRIES);
-    localStorage.removeItem(STORAGE_KEYS.SETTINGS);
-    localStorage.removeItem(STORAGE_KEYS.WATER);
-
-    state.entries = [];
-    state.settings = { ...DEFAULT_SETTINGS };
-    state.waterLogs = {};
-
-    closeSettingsModal();
-    showToast('All data has been cleared.');
-    render();
-  }
-
-  // -------------------------------------------------------------------------
-  // Date Shifting
-  // -------------------------------------------------------------------------
-  function shiftDate(days) {
-    const cur = parseDateString(state.currentDate);
-    cur.setDate(cur.getDate() + days);
-    state.currentDate = formatDateToString(cur);
-    render();
-  }
-
-  function setDate(dateString) {
-    if (!dateString) return;
-    state.currentDate = dateString;
-    render();
+    if (confirm('Are you sure you want to wipe ALL transactions? This cannot be undone.')) {
+      state.transactions = [];
+      saveTransactions();
+      showToast('All transaction data wiped.');
+      closeSettingsModal();
+      render();
+    }
   }
 
   // -------------------------------------------------------------------------
   // Event Listeners Binding
   // -------------------------------------------------------------------------
   function setupEventListeners() {
-    // Navigation
-    elements.prevDayBtn.addEventListener('click', () => shiftDate(-1));
-    elements.nextDayBtn.addEventListener('click', () => shiftDate(1));
-    elements.datePickerInput.addEventListener('change', (e) => setDate(e.target.value));
+    // Toolbar Filters
+    elements.timeRangeSelect.addEventListener('change', (e) => {
+      state.filters.timeRange = e.target.value;
+      render();
+    });
 
-    // Modals open/close
-    elements.openAddBtn.addEventListener('click', () => openAddFoodModal('breakfast'));
-    elements.closeFoodModalBtn.addEventListener('click', closeFoodModal);
-    elements.cancelFoodBtn.addEventListener('click', closeFoodModal);
+    elements.categoryFilterSelect.addEventListener('change', (e) => {
+      state.filters.category = e.target.value;
+      render();
+    });
+
+    elements.statusFilterSelect.addEventListener('change', (e) => {
+      state.filters.status = e.target.value;
+      render();
+    });
+
+    elements.tableSearchInput.addEventListener('input', (e) => {
+      state.filters.search = e.target.value.trim();
+      renderTable(getFilteredTransactions());
+    });
+
+    elements.quickSeedBtn.addEventListener('click', restoreSamples);
+
+    // Modals
+    elements.openNewSaleBtn.addEventListener('click', openNewSaleModal);
+    elements.closeModalBtn.addEventListener('click', closeModal);
+    elements.cancelModalBtn.addEventListener('click', closeModal);
+    elements.saleForm.addEventListener('submit', handleSaleFormSubmit);
 
     elements.openSettingsBtn.addEventListener('click', openSettingsModal);
-    elements.editGoalQuickBtn.addEventListener('click', openSettingsModal);
     elements.closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
-    elements.cancelSettingsBtn.addEventListener('click', closeSettingsModal);
+    elements.closeSettingsBtn.addEventListener('click', closeSettingsModal);
+    elements.saveSettingsBtn.addEventListener('click', handleSaveSettings);
 
-    // Form submissions
-    elements.foodForm.addEventListener('submit', handleFoodFormSubmit);
-    elements.settingsForm.addEventListener('submit', handleSettingsSubmit);
+    elements.exportJsonBtn.addEventListener('click', exportJSON);
+    elements.exportCsvBtn.addEventListener('click', exportCSV);
+    elements.importJsonFile.addEventListener('change', handleImportJSON);
+    elements.reloadSamplesBtn.addEventListener('click', restoreSamples);
+    elements.clearAllDataBtn.addEventListener('click', clearAllData);
 
-    // Close modal on click outside
-    elements.foodModal.addEventListener('click', (e) => {
-      if (e.target === elements.foodModal) closeFoodModal();
+    // Click outside to close modals
+    elements.saleModal.addEventListener('click', (e) => {
+      if (e.target === elements.saleModal) closeModal();
     });
     elements.settingsModal.addEventListener('click', (e) => {
       if (e.target === elements.settingsModal) closeSettingsModal();
     });
 
-    // Close on Escape key
+    // Escape key
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        closeFoodModal();
+        closeModal();
         closeSettingsModal();
       }
     });
 
-    // Quick presets
-    elements.presetPills.forEach(pill => {
-      pill.addEventListener('click', () => {
-        const cal = Number(pill.dataset.cal);
-        if (cal > 0) addQuickCalories(cal);
+    // Table Header Sorting
+    elements.tableHeaderCells.forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.sort;
+        if (state.sort.column === col) {
+          state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sort.column = col;
+          state.sort.direction = 'desc';
+        }
+
+        elements.tableHeaderCells.forEach(cell => {
+          cell.textContent = cell.textContent.replace(' ▲', '').replace(' ▼', '');
+        });
+        th.textContent += state.sort.direction === 'asc' ? ' ▲' : ' ▼';
+
+        renderTable(getFilteredTransactions());
       });
     });
 
-    // Add per meal type
-    document.querySelectorAll('.add-meal-specific-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const mealType = btn.dataset.mealType;
-        openAddFoodModal(mealType);
-      });
+    // Responsive chart redraw on resize
+    window.addEventListener('resize', () => {
+      renderTrendChart(getFilteredTransactions());
     });
-
-    // Search filter
-    elements.foodSearchInput.addEventListener('input', (e) => {
-      state.searchQuery = e.target.value;
-      renderMealLogs();
-    });
-
-    // Water tracker controls
-    elements.addWaterBtn.addEventListener('click', () => addWater(250));
-    elements.addWater500Btn.addEventListener('click', () => addWater(500));
-    elements.resetWaterBtn.addEventListener('click', resetWater);
-
-    // Data export / import / reset
-    elements.exportDataBtn.addEventListener('click', exportBackup);
-    elements.importFileInput.addEventListener('change', handleImportFile);
-    elements.clearAllDataBtn.addEventListener('click', clearAllData);
   }
 
   // -------------------------------------------------------------------------
   // Initialization
   // -------------------------------------------------------------------------
   function init() {
-    loadFromStorage();
+    loadData();
     setupEventListeners();
     render();
   }
 
-  // Launch when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -823,4 +1055,3 @@
   }
 
 })();
-

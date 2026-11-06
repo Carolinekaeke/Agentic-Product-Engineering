@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NutriTrack - Daily Calorie & Macro Tracker</title>
+  <title>SalesPulse - Sales Analytics Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,378 +11,401 @@
 </head>
 <body>
 
-  <!-- App Header -->
-  <header class="app-header">
-    <div class="header-container">
-      <div class="brand">
-        <div class="brand-icon">🔥</div>
-        <div>
-          <h1 class="brand-title">NutriTrack</h1>
-          <p class="brand-subtitle">Smart Daily Nutrition Tracker</p>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-left">
+      <div class="brand-logo">
+        <span class="logo-icon">📈</span>
+        <div class="brand-text">
+          <h1 class="brand-name">SalesPulse</h1>
+          <span class="brand-tagline">Real-Time Revenue & Sales Analytics</span>
         </div>
       </div>
-      <div class="header-actions">
-        <button id="open-settings-btn" class="btn btn-secondary icon-btn" title="Settings & Goals">
-          ⚙️ <span>Settings</span>
-        </button>
-        <button id="open-add-btn" class="btn btn-primary" title="Add Food Item">
-          ➕ <span>Log Food</span>
-        </button>
+    </div>
+
+    <div class="nav-right">
+      <div class="live-indicator">
+        <span class="pulse-dot"></span>
+        <span class="live-text">Live Analytics</span>
       </div>
+      <button id="open-settings-btn" class="btn btn-secondary" title="Data Management">
+        ⚙️ <span>Manage Data</span>
+      </button>
+      <button id="open-new-sale-btn" class="btn btn-primary" title="Record New Sale">
+        ➕ <span>Log New Sale</span>
+      </button>
     </div>
   </header>
 
-  <main class="main-container">
-
-    <!-- Date Navigation Bar -->
-    <section class="date-navigator-card">
-      <button id="prev-day-btn" class="nav-arrow-btn" aria-label="Previous Day">‹</button>
-      <div class="date-display-wrapper">
-        <span id="date-label-badge" class="date-badge">Today</span>
-        <h2 id="current-date-heading" class="date-heading">Wednesday, Nov 6</h2>
-        <input type="date" id="date-picker-input" class="date-picker-hidden">
-        <label for="date-picker-input" class="change-date-label">📅 Change Date</label>
+  <!-- Filter & Controls Toolbar -->
+  <section class="toolbar-section">
+    <div class="toolbar-container">
+      <div class="filter-group">
+        <label for="time-range-select" class="filter-label">Time Period:</label>
+        <select id="time-range-select" class="select-input">
+          <option value="all">All Time (Full History)</option>
+          <option value="month" selected>This Month (Current)</option>
+          <option value="quarter">This Quarter</option>
+          <option value="year">This Year</option>
+          <option value="week">Past 7 Days</option>
+        </select>
       </div>
-      <button id="next-day-btn" class="nav-arrow-btn" aria-label="Next Day">›</button>
+
+      <div class="filter-group">
+        <label for="category-filter-select" class="filter-label">Category:</label>
+        <select id="category-filter-select" class="select-input">
+          <option value="all">All Categories</option>
+          <option value="Software">Software & SaaS</option>
+          <option value="Hardware">Hardware Devices</option>
+          <option value="Services">Consulting & Services</option>
+          <option value="Subscriptions">Annual Subscriptions</option>
+          <option value="Accessories">Accessories</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="status-filter-select" class="filter-label">Status:</label>
+        <select id="status-filter-select" class="select-input">
+          <option value="all">All Statuses</option>
+          <option value="Completed">Completed</option>
+          <option value="Pending">Pending</option>
+          <option value="Refunded">Refunded</option>
+        </select>
+      </div>
+
+      <div class="toolbar-actions">
+        <button id="quick-seed-btn" class="btn btn-ghost btn-sm" title="Reload rich realistic sales data">
+          🔄 Reset Sample Data
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Container -->
+  <main class="dashboard-body">
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="kpi-grid">
+      <!-- Total Revenue -->
+      <div class="kpi-card card-revenue">
+        <div class="kpi-header">
+          <span class="kpi-title">Total Revenue</span>
+          <span class="kpi-badge badge-green">▲ +18.4%</span>
+        </div>
+        <div class="kpi-value-wrap">
+          <span class="kpi-currency">$</span>
+          <span id="kpi-total-revenue" class="kpi-number">0</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="kpi-subtext">Net earnings from completed orders</span>
+        </div>
+      </div>
+
+      <!-- Total Orders -->
+      <div class="kpi-card card-orders">
+        <div class="kpi-header">
+          <span class="kpi-title">Total Orders</span>
+          <span class="kpi-badge badge-blue">▲ +12.6%</span>
+        </div>
+        <div class="kpi-value-wrap">
+          <span id="kpi-total-orders" class="kpi-number">0</span>
+          <span class="kpi-unit">orders</span>
+        </div>
+        <div class="kpi-footer">
+          <span id="kpi-completed-ratio" class="kpi-subtext">0 completed</span>
+        </div>
+      </div>
+
+      <!-- Average Order Value (AOV) -->
+      <div class="kpi-card card-aov">
+        <div class="kpi-header">
+          <span class="kpi-title">Average Order Value</span>
+          <span class="kpi-badge badge-purple">▲ +5.1%</span>
+        </div>
+        <div class="kpi-value-wrap">
+          <span class="kpi-currency">$</span>
+          <span id="kpi-aov" class="kpi-number">0.00</span>
+        </div>
+        <div class="kpi-footer">
+          <span class="kpi-subtext">Revenue per order</span>
+        </div>
+      </div>
+
+      <!-- Monthly Sales Target Goal -->
+      <div class="kpi-card card-target">
+        <div class="kpi-header">
+          <span class="kpi-title">Monthly Quota ($120k)</span>
+          <span id="target-progress-percent" class="kpi-badge badge-orange">0%</span>
+        </div>
+        <div class="kpi-progress-bar-wrap">
+          <div class="kpi-progress-bar-track">
+            <div id="target-progress-fill" class="kpi-progress-bar-fill"></div>
+          </div>
+        </div>
+        <div class="kpi-footer">
+          <span id="target-remaining-label" class="kpi-subtext">$0 remaining to hit quota</span>
+        </div>
+      </div>
     </section>
 
-    <!-- Calorie & Macro Overview -->
-    <section class="dashboard-grid">
-      <!-- Main Calorie Card -->
-      <div class="card calorie-overview-card">
+    <!-- Visual Analytics: Charts Section -->
+    <section class="charts-grid">
+
+      <!-- Revenue Trend Line/Area Chart -->
+      <div class="card chart-card-large">
         <div class="card-header">
-          <h3 class="card-title">Calories Summary</h3>
-          <button id="edit-goal-quick-btn" class="link-btn">Edit Goal</button>
+          <div>
+            <h2 class="card-title">Revenue Trajectory Over Time</h2>
+            <p class="card-subtitle">Daily sales revenue timeline with trend analysis</p>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-dot dot-revenue"></span>
+            <span class="legend-text">Revenue ($)</span>
+          </div>
         </div>
 
-        <div class="calorie-metrics-row">
-          <div class="metric-block">
-            <span class="metric-label">Consumed</span>
-            <span id="total-consumed-val" class="metric-number metric-consumed">0</span>
-            <span class="metric-unit">kcal</span>
-          </div>
+        <div class="chart-canvas-wrapper" id="trend-chart-container">
+          <svg id="revenue-trend-svg" class="analytics-svg" viewBox="0 0 700 240" preserveAspectRatio="none">
+            <!-- Dynamic grid lines, axes, path and gradient will be generated by JavaScript -->
+          </svg>
+          <div id="chart-tooltip" class="chart-tooltip"></div>
+        </div>
+      </div>
 
-          <div class="progress-ring-container">
-            <svg class="progress-ring" width="140" height="140" viewBox="0 0 140 140">
-              <circle class="progress-ring-bg" stroke-width="12" cx="70" cy="70" r="56" fill="transparent" />
-              <circle id="calorie-progress-circle" class="progress-ring-fill" stroke-width="12" stroke-linecap="round" cx="70" cy="70" r="56" fill="transparent" stroke-dasharray="351.86" stroke-dashoffset="351.86" />
+      <!-- Category Share Donut / Distribution Chart -->
+      <div class="card chart-card-small">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Sales by Category</h2>
+            <p class="card-subtitle">Volume & percentage share</p>
+          </div>
+        </div>
+
+        <div class="category-breakdown-container">
+          <!-- Donut chart -->
+          <div class="donut-chart-box">
+            <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160">
+              <g id="donut-segments-group" transform="rotate(-90 80 80)"></g>
+              <circle cx="80" cy="80" r="50" fill="#ffffff" />
             </svg>
-            <div class="progress-ring-center">
-              <span id="remaining-calorie-val" class="center-calorie-val">2000</span>
-              <span id="remaining-calorie-label" class="center-calorie-sub">kcal left</span>
+            <div class="donut-center-info">
+              <span id="donut-center-total" class="donut-center-val">$0</span>
+              <span class="donut-center-sub">Total</span>
             </div>
           </div>
 
-          <div class="metric-block">
-            <span class="metric-label">Daily Goal</span>
-            <span id="daily-goal-val" class="metric-number metric-goal">2,000</span>
-            <span class="metric-unit">kcal</span>
-          </div>
-        </div>
-
-        <!-- Linear Progress bar -->
-        <div class="progress-bar-container">
-          <div class="progress-bar-track">
-            <div id="calorie-progress-bar" class="progress-bar-fill"></div>
-          </div>
-          <div class="progress-bar-labels">
-            <span id="progress-percentage-label">0% of daily budget</span>
-            <span id="calorie-status-label">On track</span>
+          <!-- Category Legend List -->
+          <div id="category-legend-list" class="category-legend-list">
+            <!-- Populated dynamically -->
           </div>
         </div>
       </div>
 
-      <!-- Macros Card -->
-      <div class="card macros-overview-card">
+    </section>
+
+    <!-- Secondary Insights Grid (Top Products & Payment Methods) -->
+    <section class="insights-grid">
+
+      <!-- Top Selling Products Leaderboard -->
+      <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Macronutrients</h3>
-          <span class="card-meta">Daily Breakdown</span>
+          <h2 class="card-title">Top Performing Products</h2>
+          <span class="card-meta">Ranked by revenue</span>
         </div>
-
-        <div class="macros-list">
-          <!-- Protein -->
-          <div class="macro-row">
-            <div class="macro-info">
-              <span class="macro-badge macro-protein">Protein</span>
-              <span class="macro-calories" id="protein-cals">0 kcal (4 kcal/g)</span>
-            </div>
-            <div class="macro-value-wrap">
-              <strong id="protein-grams">0</strong> <span class="unit">g</span>
-            </div>
-            <div class="macro-bar-track">
-              <div id="protein-bar-fill" class="macro-bar-fill fill-protein" style="width: 0%;"></div>
-            </div>
-          </div>
-
-          <!-- Carbohydrates -->
-          <div class="macro-row">
-            <div class="macro-info">
-              <span class="macro-badge macro-carbs">Carbs</span>
-              <span class="macro-calories" id="carbs-cals">0 kcal (4 kcal/g)</span>
-            </div>
-            <div class="macro-value-wrap">
-              <strong id="carbs-grams">0</strong> <span class="unit">g</span>
-            </div>
-            <div class="macro-bar-track">
-              <div id="carbs-bar-fill" class="macro-bar-fill fill-carbs" style="width: 0%;"></div>
-            </div>
-          </div>
-
-          <!-- Fats -->
-          <div class="macro-row">
-            <div class="macro-info">
-              <span class="macro-badge macro-fat">Fats</span>
-              <span class="macro-calories" id="fat-cals">0 kcal (9 kcal/g)</span>
-            </div>
-            <div class="macro-value-wrap">
-              <strong id="fat-grams">0</strong> <span class="unit">g</span>
-            </div>
-            <div class="macro-bar-track">
-              <div id="fat-bar-fill" class="macro-bar-fill fill-fat" style="width: 0%;"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Water Hydration Card inline -->
-        <div class="water-tracker-box">
-          <div class="water-header">
-            <div class="water-title">💧 Water Intake</div>
-            <div class="water-stats"><strong id="water-current-val">0</strong> / <span id="water-goal-val">2000</span> ml</div>
-          </div>
-          <div class="water-progress-track">
-            <div id="water-progress-bar" class="water-progress-fill" style="width: 0%;"></div>
-          </div>
-          <div class="water-controls">
-            <button id="add-water-btn" class="water-btn">+250 ml (1 cup)</button>
-            <button id="add-water-500-btn" class="water-btn">+500 ml (Bottle)</button>
-            <button id="reset-water-btn" class="water-btn btn-ghost">Reset</button>
-          </div>
+        <div class="leaderboard-list" id="top-products-list">
+          <!-- Populated dynamically -->
         </div>
       </div>
+
+      <!-- Payment Breakdown -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Payment Methods</h2>
+          <span class="card-meta">Distribution</span>
+        </div>
+        <div class="payment-bars-list" id="payment-methods-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
     </section>
 
-    <!-- Quick Preset Buttons -->
-    <section class="quick-presets-section">
-      <div class="section-title-wrap">
-        <h4 class="presets-title">⚡ Quick Calorie Add</h4>
-        <span class="presets-hint">Tap to instantly add quick calories to today</span>
-      </div>
-      <div class="presets-pill-list">
-        <button class="preset-pill" data-cal="50">+50 kcal</button>
-        <button class="preset-pill" data-cal="100">+100 kcal</button>
-        <button class="preset-pill" data-cal="200">+200 kcal</button>
-        <button class="preset-pill" data-cal="300">+300 kcal</button>
-        <button class="preset-pill" data-cal="500">+500 kcal</button>
-      </div>
-    </section>
+    <!-- Recent Sales Transactions Table -->
+    <section class="card table-card">
+      <div class="table-header-row">
+        <div>
+          <h2 class="card-title">Recent Transactions</h2>
+          <p class="card-subtitle">Real-time ledger of orders and invoices</p>
+        </div>
 
-    <!-- Meal Log Sections -->
-    <section class="meals-container">
-      <div class="meals-header-bar">
-        <h3 class="section-heading">Daily Meals & Snacks</h3>
-        <div class="search-filter-wrap">
-          <input type="text" id="food-search-input" class="search-input" placeholder="🔍 Search foods logged today...">
+        <div class="table-search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="table-search-input" class="table-search-input" placeholder="Search customer, order ID, product...">
         </div>
       </div>
 
-      <!-- Breakfast -->
-      <div class="meal-group-card" data-meal="breakfast">
-        <div class="meal-group-header">
-          <div class="meal-group-title-wrap">
-            <span class="meal-group-emoji">🍳</span>
-            <div>
-              <h4 class="meal-group-name">Breakfast</h4>
-              <span class="meal-group-sub" id="breakfast-sub">Recommended: 25% of daily goal</span>
-            </div>
-          </div>
-          <div class="meal-group-right">
-            <div class="meal-group-total"><span id="breakfast-total-cal">0</span> kcal</div>
-            <button class="add-meal-specific-btn" data-meal-type="breakfast">+ Add</button>
-          </div>
-        </div>
-        <div class="food-items-list" id="breakfast-items-list">
-          <div class="empty-meal-placeholder">No breakfast logged yet</div>
-        </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-sort="id" class="sortable">Order ID</th>
+              <th data-sort="customer" class="sortable">Customer</th>
+              <th data-sort="product" class="sortable">Product / Service</th>
+              <th data-sort="category">Category</th>
+              <th data-sort="date" class="sortable">Date</th>
+              <th data-sort="payment">Payment</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="amount" class="sortable text-right">Amount</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="transactions-table-body">
+            <!-- Dynamic rows inserted here -->
+          </tbody>
+        </table>
       </div>
 
-      <!-- Lunch -->
-      <div class="meal-group-card" data-meal="lunch">
-        <div class="meal-group-header">
-          <div class="meal-group-title-wrap">
-            <span class="meal-group-emoji">🥗</span>
-            <div>
-              <h4 class="meal-group-name">Lunch</h4>
-              <span class="meal-group-sub" id="lunch-sub">Recommended: 35% of daily goal</span>
-            </div>
-          </div>
-          <div class="meal-group-right">
-            <div class="meal-group-total"><span id="lunch-total-cal">0</span> kcal</div>
-            <button class="add-meal-specific-btn" data-meal-type="lunch">+ Add</button>
-          </div>
-        </div>
-        <div class="food-items-list" id="lunch-items-list">
-          <div class="empty-meal-placeholder">No lunch logged yet</div>
-        </div>
-      </div>
-
-      <!-- Dinner -->
-      <div class="meal-group-card" data-meal="dinner">
-        <div class="meal-group-header">
-          <div class="meal-group-title-wrap">
-            <span class="meal-group-emoji">🍲</span>
-            <div>
-              <h4 class="meal-group-name">Dinner</h4>
-              <span class="meal-group-sub" id="dinner-sub">Recommended: 30% of daily goal</span>
-            </div>
-          </div>
-          <div class="meal-group-right">
-            <div class="meal-group-total"><span id="dinner-total-cal">0</span> kcal</div>
-            <button class="add-meal-specific-btn" data-meal-type="dinner">+ Add</button>
-          </div>
-        </div>
-        <div class="food-items-list" id="dinner-items-list">
-          <div class="empty-meal-placeholder">No dinner logged yet</div>
-        </div>
-      </div>
-
-      <!-- Snacks -->
-      <div class="meal-group-card" data-meal="snacks">
-        <div class="meal-group-header">
-          <div class="meal-group-title-wrap">
-            <span class="meal-group-emoji">🍎</span>
-            <div>
-              <h4 class="meal-group-name">Snacks & Others</h4>
-              <span class="meal-group-sub" id="snacks-sub">Recommended: 10% of daily goal</span>
-            </div>
-          </div>
-          <div class="meal-group-right">
-            <div class="meal-group-total"><span id="snacks-total-cal">0</span> kcal</div>
-            <button class="add-meal-specific-btn" data-meal-type="snacks">+ Add</button>
-          </div>
-        </div>
-        <div class="food-items-list" id="snacks-items-list">
-          <div class="empty-meal-placeholder">No snacks logged yet</div>
-        </div>
+      <div class="table-footer-row">
+        <span id="table-count-label" class="table-count-text">Showing 0 orders</span>
       </div>
     </section>
 
   </main>
 
-  <!-- Modal: Add / Edit Food Entry -->
-  <div id="food-modal" class="modal-overlay" aria-hidden="true">
+  <!-- Modal: Record / Edit Sale -->
+  <div id="sale-modal" class="modal-overlay" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 id="food-modal-title" class="modal-title">Log Food Item</h3>
-        <button id="close-food-modal-btn" class="modal-close-btn" aria-label="Close modal">&times;</button>
+        <h3 id="modal-title" class="modal-title">Record New Sale</h3>
+        <button id="close-modal-btn" class="modal-close-btn" aria-label="Close modal">&times;</button>
       </div>
 
-      <form id="food-form" class="modal-form">
-        <input type="hidden" id="entry-id-input">
+      <form id="sale-form" class="modal-form">
+        <input type="hidden" id="sale-id-input">
 
-        <!-- Food Name -->
-        <div class="form-group">
-          <label for="food-name-input" class="form-label">Food or Drink Name <span class="required">*</span></label>
-          <input type="text" id="food-name-input" class="form-control" placeholder="e.g. Oatmeal with blueberries, Grilled chicken" required autocomplete="off">
-        </div>
-
-        <!-- Meal Type & Calories -->
         <div class="form-row">
           <div class="form-group">
-            <label for="meal-type-select" class="form-label">Meal Type <span class="required">*</span></label>
-            <select id="meal-type-select" class="form-control" required>
-              <option value="breakfast">🍳 Breakfast</option>
-              <option value="lunch">🥗 Lunch</option>
-              <option value="dinner">🍲 Dinner</option>
-              <option value="snacks">🍎 Snack</option>
+            <label for="customer-name-input" class="form-label">Customer / Company Name <span class="required">*</span></label>
+            <input type="text" id="customer-name-input" class="form-control" placeholder="e.g. Acme Corporation, Sarah Jenkins" required>
+          </div>
+
+          <div class="form-group">
+            <label for="product-name-input" class="form-label">Product / Service <span class="required">*</span></label>
+            <input type="text" id="product-name-input" class="form-control" placeholder="e.g. Enterprise Cloud Suite, 4K Display" required>
+          </div>
+        </div>
+
+        <div class="form-row three-cols">
+          <div class="form-group">
+            <label for="category-select" class="form-label">Category <span class="required">*</span></label>
+            <select id="category-select" class="form-control" required>
+              <option value="Software">Software & SaaS</option>
+              <option value="Hardware">Hardware Devices</option>
+              <option value="Services">Consulting & Services</option>
+              <option value="Subscriptions">Annual Subscriptions</option>
+              <option value="Accessories">Accessories</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="calories-input" class="form-label">Calories (kcal) <span class="required">*</span></label>
-            <input type="number" id="calories-input" class="form-control" placeholder="e.g. 350" min="0" max="10000" step="1" required>
+            <label for="amount-input" class="form-label">Total Amount ($) <span class="required">*</span></label>
+            <input type="number" id="amount-input" class="form-control" placeholder="e.g. 1250.00" min="0.01" step="0.01" required>
+          </div>
+
+          <div class="form-group">
+            <label for="units-input" class="form-label">Units / Qty</label>
+            <input type="number" id="units-input" class="form-control" placeholder="1" min="1" step="1" value="1">
           </div>
         </div>
 
-        <!-- Portion/Serving note -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sale-date-input" class="form-label">Transaction Date <span class="required">*</span></label>
+            <input type="date" id="sale-date-input" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="payment-method-select" class="form-label">Payment Method <span class="required">*</span></label>
+            <select id="payment-method-select" class="form-control" required>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Wire Transfer">Wire Transfer / ACH</option>
+              <option value="Stripe">Stripe / Online</option>
+              <option value="PayPal">PayPal</option>
+              <option value="Check">Check</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label for="serving-input" class="form-label">Portion / Serving Size (Optional)</label>
-          <input type="text" id="serving-input" class="form-control" placeholder="e.g. 1 bowl, 200g, 1 slice">
-        </div>
-
-        <!-- Optional Macros Section -->
-        <div class="macro-inputs-section">
-          <div class="macro-section-label">Macros (Optional, in grams)</div>
-          <div class="form-row three-cols">
-            <div class="form-group">
-              <label for="protein-input" class="form-label label-protein">Protein (g)</label>
-              <input type="number" id="protein-input" class="form-control" placeholder="0" min="0" max="1000" step="0.1">
-            </div>
-            <div class="form-group">
-              <label for="carbs-input" class="form-label label-carbs">Carbs (g)</label>
-              <input type="number" id="carbs-input" class="form-control" placeholder="0" min="0" max="1000" step="0.1">
-            </div>
-            <div class="form-group">
-              <label for="fat-input" class="form-label label-fat">Fat (g)</label>
-              <input type="number" id="fat-input" class="form-control" placeholder="0" min="0" max="1000" step="0.1">
-            </div>
-          </div>
+          <label for="status-select" class="form-label">Order Status <span class="required">*</span></label>
+          <select id="status-select" class="form-control" required>
+            <option value="Completed">Completed (Paid)</option>
+            <option value="Pending">Pending (Invoice Sent)</option>
+            <option value="Refunded">Refunded / Cancelled</option>
+          </select>
         </div>
 
         <div class="modal-footer">
-          <button type="button" id="cancel-food-btn" class="btn btn-secondary">Cancel</button>
-          <button type="submit" id="save-food-btn" class="btn btn-primary">Save Entry</button>
+          <button type="button" id="cancel-modal-btn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="save-sale-btn" class="btn btn-primary">Save Transaction</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal: Settings & Goals -->
+  <!-- Modal: Data Management (Export, Import, Target Quota) -->
   <div id="settings-modal" class="modal-overlay" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Settings & Goals</h3>
+        <h3 class="modal-title">Dashboard Settings & Data Backup</h3>
         <button id="close-settings-modal-btn" class="modal-close-btn" aria-label="Close modal">&times;</button>
       </div>
 
-      <form id="settings-form" class="modal-form">
+      <div class="modal-body">
         <div class="form-group">
-          <label for="goal-calories-input" class="form-label">Daily Calorie Target (kcal)</label>
-          <input type="number" id="goal-calories-input" class="form-control" min="500" max="10000" step="10" required>
-          <small class="form-hint">Standard adult recommended range is 1,800 to 2,500 kcal depending on activity level.</small>
-        </div>
-
-        <div class="form-group">
-          <label for="goal-water-input" class="form-label">Daily Hydration Target (ml)</label>
-          <input type="number" id="goal-water-input" class="form-control" min="500" max="8000" step="100" required>
+          <label for="monthly-target-input" class="form-label">Monthly Sales Revenue Quota Target ($)</label>
+          <div class="input-with-prefix">
+            <span class="prefix">$</span>
+            <input type="number" id="monthly-target-input" class="form-control" min="1000" step="1000" value="120000">
+          </div>
+          <small class="form-hint">Used to calculate target completion progress on your dashboard.</small>
         </div>
 
         <div class="divider"></div>
 
-        <div class="settings-data-management">
-          <h4 class="data-manage-title">Data Backup & Reset</h4>
-          <p class="data-manage-desc">All your logs are stored securely in your browser's local storage.</p>
-          <div class="data-buttons-row">
-            <button type="button" id="export-data-btn" class="btn btn-secondary btn-sm">📥 Export Backup (JSON)</button>
-            <label for="import-file-input" class="btn btn-secondary btn-sm file-label">📤 Import Backup</label>
-            <input type="file" id="import-file-input" accept=".json" class="file-hidden">
-          </div>
-          <div class="danger-zone">
-            <button type="button" id="clear-all-data-btn" class="btn btn-danger btn-sm">🗑️ Clear All Saved Data</button>
+        <div class="data-manage-section">
+          <h4 class="data-manage-heading">Data Export & Import</h4>
+          <p class="data-manage-sub">All sales data is stored permanently in your browser's local storage.</p>
+          <div class="data-buttons-grid">
+            <button type="button" id="export-json-btn" class="btn btn-secondary btn-sm">📥 Export JSON Backup</button>
+            <button type="button" id="export-csv-btn" class="btn btn-secondary btn-sm">📊 Export CSV (Spreadsheet)</button>
+            <label for="import-json-file" class="btn btn-secondary btn-sm file-trigger-label">📤 Import JSON Backup</label>
+            <input type="file" id="import-json-file" accept=".json" class="file-hidden">
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" id="cancel-settings-btn" class="btn btn-secondary">Close</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
+        <div class="divider"></div>
+
+        <div class="danger-zone-box">
+          <h4 class="danger-title">Danger Zone</h4>
+          <p class="danger-desc">Reset all records to factory sample data or clear all transactions.</p>
+          <div class="danger-actions">
+            <button type="button" id="reload-samples-btn" class="btn btn-secondary btn-sm">🔄 Restore Rich Sample Data</button>
+            <button type="button" id="clear-all-data-btn" class="btn btn-danger btn-sm">🗑️ Wipe All Transactions</button>
+          </div>
         </div>
-      </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="close-settings-btn" class="btn btn-secondary">Close</button>
+        <button type="button" id="save-settings-btn" class="btn btn-primary">Save Settings</button>
+      </div>
     </div>
   </div>
 
-  <!-- Toast Notification Container -->
-  <div id="toast" class="toast-notification" aria-live="polite"></div>
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-box" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>
 </html>
-
